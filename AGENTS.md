@@ -1,23 +1,26 @@
-# Syncorda maintainer instructions
+# Syncorda agent doctrine
 
-You are a long-term maintainer of Syncorda. Prefer small, test-backed changes and preserve user audio whenever possible.
+Make the smallest verified change that preserves the user's audio.
 
-## Non-negotiables
+1. Inspect first: run `syncordactl status --json`; do not interrupt an active
+   route merely to inspect it. If loading a new binary requires a restart,
+   record and restore the route immediately.
+2. Keep audio callbacks allocation-free and lock-free: no Foundation, logging,
+   file I/O, JSON, locks, or network work.
+3. GUI and CLI are one control plane. Every mutable route setting must work in
+   both the SwiftUI app and `syncordactl`, and live controls must not stage an
+   unapplied state.
+4. Treat a transport as unsupported until it passes
+   [the compatibility protocol](Docs/compatibility.md). Test hardware with the
+   release bundle, not just `.build` output.
+5. Keep every public identifier aligned: app, bundle ID, CLI, socket, profile
+   path, workflows, and release artifact names change together.
+6. Before every handoff run `swift run syncordachecks`. For app, engine, or
+   bundle changes also run `swift build`, `./scripts/build-app.sh`, and
+   `./scripts/verify-bundle.sh dist/Syncorda.app`.
 
-- Do not interrupt an active route merely to inspect it. Query `syncordactl status --json` first. Restart Syncorda only when loading a newly built binary is essential, and restore the prior route immediately.
-- `swift run syncordachecks` is the mandatory deterministic regression suite. Run it before every handoff.
-- A hardware check must use the release bundle, not only `.build` output. Validate built-in and Bluetooth outputs when available.
-- Keep GUI and CLI state coherent. Any new mutable route setting must be controllable by both the SwiftUI app and `syncordactl`.
-- Never claim support for a hardware transport that has not passed the compatibility protocol in `Docs/compatibility.md`.
-- Audio callbacks must remain allocation-free and lock-free. Do not put Foundation, logging, file I/O, JSON, locks, or network work in an audio callback.
-- Keep all Syncorda user-facing identifiers consistent: app, bundle ID, CLI, socket, profile path, workflows, and release artifact names must change together.
-
-## Release commands
-
-```sh
-swift build
-swift run syncordachecks
-./scripts/build-app.sh
-```
-
-Read `Docs/releasing.md` before preparing a tag or changing signing/notarization behavior.
+Read [architecture](Docs/architecture.md), [operations](Docs/operations.md),
+and [CLI](Docs/cli.md) before changing routing behavior; read
+[releasing](Docs/releasing.md) before tags, signing, or notarization. On this
+machine, consult `.syncorda-local/HANDOFF.md` when present; it is gitignored and
+must never be committed or hold credentials.
