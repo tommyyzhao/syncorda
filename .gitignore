@@ -1,5 +1,6 @@
 .build/
 dist/
 tmp/
+.syncorda-local/
 .DS_Store
 *.xcuserstate

@@ -104,7 +104,7 @@ swift build
 
 `syncordachecks` is a standard-library test executable because this machine's Command Line Tools installation has neither XCTest nor Swift Testing. It tests timeline wraparound, independent delays, resampling, mute semantics, persistent profiles, the JSON protocol, and a live local-control socket round trip.
 
-See [the architecture notes](Docs/architecture.md), [CLI reference](Docs/cli.md), [privacy notes](Docs/privacy.md), [compatibility matrix](Docs/compatibility.md), [design notes](Docs/design.md), [brand record](Docs/branding.md), [contributing guide](CONTRIBUTING.md), and [security policy](SECURITY.md).
+See [the architecture notes](Docs/architecture.md), [operating guide](Docs/operations.md), [CLI reference](Docs/cli.md), [privacy notes](Docs/privacy.md), [compatibility matrix](Docs/compatibility.md), [design notes](Docs/design.md), [brand record](Docs/branding.md), [contributing guide](CONTRIBUTING.md), and [security policy](SECURITY.md).
 
 ## License
 
