@@ -1,0 +1,78 @@
+name: Signed release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, for example 0.1.0-alpha.1
+        required: true
+        type: string
+      prerelease:
+        description: Mark the GitHub release as a prerelease
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  sign-notarize-publish:
+    # Build with Swift 6 on Apple Silicon; Syncorda's deployment target remains macOS 14.2.
+    runs-on: macos-15
+    timeout-minutes: 35
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+      - name: Import Developer ID certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_BASE64"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$KEYCHAIN_PASSWORD"
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/syncorda-signing.keychain-db"
+          echo "$CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+      - name: Build signed app
+        env:
+          SYNCORDA_VERSION: ${{ inputs.version }}
+          SYNCORDA_BUILD: ${{ github.run_number }}
+          DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
+        run: |
+          test "$(uname -m)" = arm64
+          test -n "$DEVELOPER_ID_APPLICATION"
+          ./scripts/build-app.sh
+          ./scripts/verify-bundle.sh
+      - name: Archive app
+        run: |
+          ditto -c -k --keepParent dist/Syncorda.app "dist/Syncorda-${{ inputs.version }}-arm64.zip"
+          shasum -a 256 "dist/Syncorda-${{ inputs.version }}-arm64.zip" > "dist/Syncorda-${{ inputs.version }}-arm64.zip.sha256"
+      - name: Notarize and staple
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_API_PRIVATE_KEY: ${{ secrets.APPLE_NOTARY_PRIVATE_KEY }}
+        run: |
+          test -n "$APPLE_API_KEY_ID"
+          test -n "$APPLE_API_ISSUER"
+          test -n "$APPLE_API_PRIVATE_KEY"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_PRIVATE_KEY" > "$KEY_PATH"
+          xcrun notarytool submit "dist/Syncorda-${{ inputs.version }}-arm64.zip" --key "$KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --wait
+          xcrun stapler staple dist/Syncorda.app
+          ditto -c -k --keepParent dist/Syncorda.app "dist/Syncorda-${{ inputs.version }}-arm64.zip"
+          shasum -a 256 "dist/Syncorda-${{ inputs.version }}-arm64.zip" > "dist/Syncorda-${{ inputs.version }}-arm64.zip.sha256"
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}" "dist/Syncorda-${{ inputs.version }}-arm64.zip" "dist/Syncorda-${{ inputs.version }}-arm64.zip.sha256" --title "Syncorda v${{ inputs.version }}" ${{ inputs.prerelease && '--prerelease' || '' }} --generate-notes

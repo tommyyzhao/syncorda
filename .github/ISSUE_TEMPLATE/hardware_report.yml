@@ -1,0 +1,28 @@
+name: Hardware compatibility report
+description: Add a device to Syncorda's compatibility evidence.
+labels: [compatibility]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Output device model and transport
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Mac model, architecture, and macOS version
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Qualification results
+      description: Cover startup, live controls, ten-minute playback, reconnect, sleep/wake, and source relaunch.
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: Sanitized syncordactl status
+      render: json

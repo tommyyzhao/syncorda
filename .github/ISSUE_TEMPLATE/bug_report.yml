@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible Syncorda problem without sharing private audio.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach recordings, credentials, or private account data. For security issues, use the private reporting channel.
+  - type: input
+    id: version
+    attributes:
+      label: Syncorda version
+      placeholder: 0.1.0-alpha.1
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and architecture
+      placeholder: macOS 15.0, Apple Silicon
+    validations:
+      required: true
+  - type: textarea
+    id: route
+    attributes:
+      label: Source and outputs
+      description: Include source app, output transport, sample rate, and redacted UID if useful.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: Sanitized syncordactl status
+      render: json
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
